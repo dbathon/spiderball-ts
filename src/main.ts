@@ -10,23 +10,19 @@ if (canvas && ctx && body) {
   body.addEventListener("keydown", (event) => {
     if (!event.repeat) {
       game.pressedKeys.add(event.code);
-      console.log([...game.pressedKeys]);
     }
   });
   body.addEventListener("keyup", (event) => {
     game.pressedKeys.delete(event.code);
-    console.log([...game.pressedKeys]);
   });
 
   canvas.addEventListener("mousedown", (event) => {
-    console.log("down", event.button, event.offsetX, event.offsetY);
     game.pressedMouseButtons.add(event.button);
     game.mouseX = event.offsetX;
     game.mouseY = event.offsetY;
     game.startLevelIfNotPlaying();
   });
   canvas.addEventListener("mousemove", (event) => {
-    console.log("move", event.offsetX, event.offsetY);
     game.mouseX = event.offsetX;
     game.mouseY = event.offsetY;
   });
