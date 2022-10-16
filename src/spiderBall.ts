@@ -167,14 +167,8 @@ class Level {
     }
 
     const arms = player.arms;
-    arms[0].x = player.x;
-    arms[0].y = player.y;
-    arms[1].x = player.x;
-    arms[1].y = player.y;
-    arms[0].velocity.x = -5.0;
-    arms[1].velocity.x = 5.0;
-    arms[0].velocity.y = -5.0;
-    arms[1].velocity.y = -5.0;
+    arms[0].shoot(player, -5, -5);
+    arms[1].shoot(player, 5, -5);
   }
 }
 
