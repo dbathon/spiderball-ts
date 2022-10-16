@@ -25,7 +25,7 @@ class Point {
 }
 
 class Obstacle extends Point {
-  constructor(x: number, y: number, public ds_9_: number) {
+  constructor(x: number, y: number, public velocityX: number) {
     super(x, y);
   }
 
@@ -87,17 +87,38 @@ class Polygon {
   }
 }
 
-class Level {
-  readonly ds = [
-    [0, 0],
-    [0, 0],
-    [0, 0],
-    [0, 0],
-    [0, 0],
-  ];
-  readonly ds_4_ = [0, 0, 0, 0];
+class Arm extends Point {
+  readonly velocity = new Point(0, 0);
 
-  readonly is: number[] = [];
+  /** not attached (false), attached to the level (true) or attached to an obstacle */
+  attached: boolean | Obstacle = false;
+
+  constructor(readonly style: string) {
+    super(0, 0);
+  }
+
+  shoot(from: Point, velocityX: number, velocityY: number) {
+    this.x = from.x;
+    this.y = from.y;
+    this.velocity.x = velocityX;
+    this.velocity.y = velocityY;
+    this.attached = false;
+  }
+}
+
+class Player extends Point {
+  readonly velocity = new Point(0, 0);
+
+  readonly arms: [Arm, Arm] = [new Arm("orange"), new Arm("red")];
+
+  constructor() {
+    super(0, 0);
+  }
+}
+
+class Level {
+  readonly player = new Player();
+
   readonly levelPolygon: Polygon;
 
   readonly obstacles: Obstacle[] = [];
@@ -113,15 +134,15 @@ class Level {
   constructor(levelString: string) {
     const [firstPart, obstaclesPart] = levelString.split(",");
 
-    const ds_4_ = this.ds_4_;
+    const player = this.player;
 
-    ds_4_[0] = parseInt(firstPart.substring(firstPart.length - 8, firstPart.length - 6), 16) * 16;
-    ds_4_[1] = parseInt(firstPart.substring(firstPart.length - 6, firstPart.length - 4), 16) * 16;
+    player.x = parseInt(firstPart.substring(firstPart.length - 8, firstPart.length - 6), 16) * 16;
+    player.y = parseInt(firstPart.substring(firstPart.length - 6, firstPart.length - 4), 16) * 16;
     this.i_5_ = parseInt(firstPart.substring(firstPart.length - 4, firstPart.length - 2), 16) * 16;
     this.i_6_ = parseInt(firstPart.substring(firstPart.length - 2, firstPart.length), 16) * 16;
 
-    this.a_double_fld = ds_4_[0] - 400.0;
-    this.b_double_fld = ds_4_[1] - 400.0;
+    this.a_double_fld = player.x - 400.0;
+    this.b_double_fld = player.y - 400.0;
 
     const polygonPoints: Point[] = [];
     for (let i = 0; i < firstPart.length / 4 - 2; i++) {
@@ -146,15 +167,15 @@ class Level {
       }
     }
 
-    const ds = this.ds;
-    ds[0][0] = ds_4_[0];
-    ds[1][0] = ds_4_[1];
-    ds[0][1] = ds_4_[0];
-    ds[1][1] = ds_4_[1];
-    ds[2][0] = -5.0;
-    ds[2][1] = 5.0;
-    ds[3][0] = -5.0;
-    ds[3][1] = -5.0;
+    const arms = player.arms;
+    arms[0].x = player.x;
+    arms[0].y = player.y;
+    arms[1].x = player.x;
+    arms[1].y = player.y;
+    arms[0].velocity.x = -5.0;
+    arms[1].velocity.x = 5.0;
+    arms[0].velocity.y = -5.0;
+    arms[1].velocity.y = -5.0;
   }
 }
 
@@ -206,8 +227,8 @@ export class SpiderBall {
 
       const mouseX = this.mouseX + level.a_double_fld;
       const mouseY = this.mouseY + level.b_double_fld;
-      const ds = level.ds;
-      const ds_4_ = level.ds_4_;
+      const player = level.player;
+      const arms = player.arms;
       const levelPoly = level.levelPolygon;
 
       ctx.fillStyle = "#303030";
@@ -218,8 +239,8 @@ export class SpiderBall {
       // ctx.fillStyle = "#909090";
       // ctx.fillRect(this.mouseX, this.mouseY, 10, 10);
 
-      level.c_double_fld = ds_4_[0] - 400.0;
-      level.d_double_fld = ds_4_[1] - 300.0;
+      level.c_double_fld = player.x - 400.0;
+      level.d_double_fld = player.y - 300.0;
       level.a_double_fld += (-level.a_double_fld + level.c_double_fld) / 30.0;
       level.b_double_fld += (-level.b_double_fld + level.d_double_fld) / 30.0;
       ctx.translate(-level.a_double_fld, -level.b_double_fld);
@@ -240,20 +261,14 @@ export class SpiderBall {
       this.pressedMouseButtons.clear();
 
       if (leftPressed || rightPressed) {
-        const d = Math.atan2(mouseY - ds_4_[1], mouseX - ds_4_[0]);
+        const d = Math.atan2(mouseY - player.y, mouseX - player.x);
+        const velocityX = 13.0 * Math.cos(d);
+        const velocityY = 13.0 * Math.sin(d);
         if (leftPressed) {
-          ds[2][0] = 13.0 * Math.cos(d);
-          ds[3][0] = 13.0 * Math.sin(d);
-          ds[0][0] = ds_4_[0];
-          ds[1][0] = ds_4_[1];
-          ds[4][0] = 0.0;
+          arms[0].shoot(player, velocityX, velocityY);
         }
         if (rightPressed) {
-          ds[2][1] = 13.0 * Math.cos(d);
-          ds[3][1] = 13.0 * Math.sin(d);
-          ds[0][1] = ds_4_[0];
-          ds[1][1] = ds_4_[1];
-          ds[4][1] = 0.0;
+          arms[1].shoot(player, velocityX, velocityY);
         }
       }
 
@@ -278,51 +293,45 @@ export class SpiderBall {
       ctx.arc(level.i_5_, level.i_6_, TARGET_SIZE, 0, 2 * Math.PI);
       ctx.stroke();
 
-      for (let i_13_ = 0; i_13_ < 2; i_13_++) {
-        if (
-          !levelPoly.contains(new Point(ds[0][i_13_], ds[1][i_13_])) &&
-          !levelPoly.contains(new Point(ds[0][i_13_] + 5, ds[1][i_13_] + 5))
-        ) {
-          ds[4][i_13_] = 1.0;
-          ds[2][i_13_] = 0.0;
+      for (const arm of arms) {
+        if (!levelPoly.contains(arm) && !levelPoly.contains(new Point(arm.x + 5, arm.y + 5))) {
+          arm.attached = true;
+          arm.velocity.x = 0.0;
         }
       }
-      if (
-        !levelPoly.contains(new Point(ds_4_[0], ds_4_[1])) &&
-        !levelPoly.contains(new Point(ds_4_[0] + 5, ds_4_[1] + 5))
-      ) {
+      if (!levelPoly.contains(player) && !levelPoly.contains(new Point(player.x + 5, player.y + 5))) {
         this.playing = false;
       }
 
       const obstacles = level.obstacles;
-      for (let i_14_ = 0; i_14_ < obstacles.length; i_14_++) {
-        const obstacle = obstacles[i_14_];
+      for (const obstacle of obstacles) {
         if (
           !levelPoly.contains(
-            new Point(obstacle.x + OBSTACLE_SIZE + 60.0 * Math.sign(obstacle.ds_9_), obstacle.y + OBSTACLE_SIZE)
+            new Point(obstacle.x + OBSTACLE_SIZE + 60.0 * Math.sign(obstacle.velocityX), obstacle.y + OBSTACLE_SIZE)
           )
         ) {
-          obstacle.ds_9_ *= -1.0;
+          obstacle.velocityX *= -1.0;
         }
-        for (let i_15_ = 0; i_15_ < 2; i_15_++) {
-          if (obstacle.contains(new Point(ds[0][i_15_], ds[1][i_15_]))) {
-            if (ds[4][i_15_] == 0.0) {
-              ds[4][i_15_] = 2 + i_14_;
+        for (const arm of arms) {
+          if (obstacle.contains(arm)) {
+            if (!arm.attached) {
+              arm.attached = obstacle;
             } else {
-              const d_18_ = Math.atan2(ds[1][i_15_] - ds_4_[1], ds[0][i_15_] - ds_4_[0]);
-              const d_19_ = Math.sqrt(Math.pow(ds[0][i_15_] - ds_4_[0], 2.0) + Math.pow(ds[1][i_15_] - ds_4_[1], 2.0));
-              obstacles[i_14_].ds_9_ += (-d_19_ / 1500.0) * Math.cos(d_18_);
+              const d_18_ = Math.atan2(arm.y - player.y, arm.x - player.x);
+              obstacle.velocityX += (-player.distanceTo(arm) / 1500.0) * Math.cos(d_18_);
             }
           }
         }
-        if (obstacle.contains(new Point(ds_4_[0], ds_4_[1]))) {
+        if (obstacle.contains(new Point(player.x, player.y))) {
           this.playing = false;
         }
-        obstacle.ds_9_ *= 0.997;
-        for (let i_20_ = 0; i_20_ < 2; i_20_++) {
-          if (ds[4][i_20_] == 2 + i_14_) ds[2][i_20_] = obstacle.ds_9_;
+        obstacle.velocityX *= 0.997;
+        for (const arm of arms) {
+          if (arm.attached === obstacle) {
+            arm.velocity.x = obstacle.velocityX;
+          }
         }
-        obstacle.x += obstacle.ds_9_;
+        obstacle.x += obstacle.velocityX;
 
         ctx.lineWidth = 14;
         ctx.strokeStyle = "#101010";
@@ -335,58 +344,45 @@ export class SpiderBall {
         ctx.fill();
       }
 
-      for (let i_21_ = 0; i_21_ < 2; i_21_++) {
-        const d = Math.atan2(ds[1][i_21_] - ds_4_[1], ds[0][i_21_] - ds_4_[0]);
-        const d_22_ = Math.sqrt(Math.pow(ds[0][i_21_] - ds_4_[0], 2.0) + Math.pow(ds[1][i_21_] - ds_4_[1], 2.0));
-        let ds_23_: number[];
-        let i_24_: number;
-        let d_25_: number;
-        let d_26_: number;
+      for (const arm of arms) {
+        const d = Math.atan2(arm.y - player.y, arm.x - player.x);
+        const distance = player.distanceTo(arm);
         let d_27_: number;
-        if (ds[4][i_21_] == 0.0) {
-          ds[0][i_21_] += ds[2][i_21_];
-          ds[1][i_21_] += ds[3][i_21_];
-          ds[2][i_21_] *= 0.992;
-          ds[3][i_21_] *= 0.992;
-          ds[3][i_21_] += 0.09;
-          ds[2][i_21_] += (-d_22_ / 1500.0) * Math.cos(d);
-          ds[3][i_21_] += (-d_22_ / 1500.0) * Math.sin(d);
-          ds_4_[2] += (d_22_ / 4000.0) * Math.cos(d);
-          ds_23_ = ds_4_;
-          i_24_ = 3;
-          d_25_ = ds_23_[i_24_];
-          d_26_ = d_22_;
+        if (!arm.attached) {
+          arm.x += arm.velocity.x;
+          arm.y += arm.velocity.y;
+          arm.velocity.x *= 0.992;
+          arm.velocity.y *= 0.992;
+          arm.velocity.y += 0.09;
+          arm.velocity.x += (-distance / 1500.0) * Math.cos(d);
+          arm.velocity.y += (-distance / 1500.0) * Math.sin(d);
           d_27_ = 4000.0;
         } else {
-          ds[0][i_21_] += ds[2][i_21_];
-          ds_4_[2] += (d_22_ / 1500.0) * Math.cos(d);
-          ds_23_ = ds_4_;
-          i_24_ = 3;
-          d_25_ = ds_23_[i_24_];
-          d_26_ = d_22_;
+          arm.x += arm.velocity.x;
           d_27_ = 1500.0;
         }
-        ds_23_[i_24_] = d_25_ + (d_26_ / d_27_) * Math.sin(d);
+        player.velocity.x += (distance / d_27_) * Math.cos(d);
+        player.velocity.y += (distance / d_27_) * Math.sin(d);
 
         ctx.lineWidth = 1;
 
         ctx.strokeStyle = "white";
         ctx.beginPath();
-        ctx.arc(ds[0][i_21_], ds[1][i_21_], 5, 0, 2 * Math.PI);
+        ctx.arc(arm.x, arm.y, 5, 0, 2 * Math.PI);
         ctx.stroke();
 
-        ctx.strokeStyle = i_21_ == 0 ? "orange" : "red";
+        ctx.strokeStyle = arm.style;
         ctx.beginPath();
-        ctx.moveTo(ds[0][i_21_], ds[1][i_21_]);
-        ctx.lineTo(ds_4_[0], ds_4_[1]);
+        ctx.moveTo(arm.x, arm.y);
+        ctx.lineTo(player.x, player.y);
         ctx.stroke();
       }
 
-      ds_4_[3] += 0.09;
-      ds_4_[2] *= 0.98;
-      ds_4_[3] *= 0.98;
-      ds_4_[0] += ds_4_[2];
-      ds_4_[1] += ds_4_[3];
+      player.velocity.y += 0.09;
+      player.velocity.x *= 0.98;
+      player.velocity.y *= 0.98;
+      player.x += player.velocity.x;
+      player.y += player.velocity.y;
 
       const playerCircles: [string, number, number, number, number][] = [
         ["black", 0, 0, 10, 10],
@@ -397,11 +393,11 @@ export class SpiderBall {
       for (const [style, offsetX, offsetY, radiusX, radiusY] of playerCircles) {
         ctx.fillStyle = style;
         ctx.beginPath();
-        ctx.ellipse(ds_4_[0] + offsetX, ds_4_[1] + offsetY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+        ctx.ellipse(player.x + offsetX, player.y + offsetY, radiusX, radiusY, 0, 0, 2 * Math.PI);
         ctx.fill();
       }
 
-      if (Math.sqrt(Math.pow(ds_4_[0] - level.i_5_, 2.0) + Math.pow(ds_4_[1] - level.i_6_, 2.0)) < TARGET_SIZE) {
+      if (Math.sqrt(Math.pow(player.x - level.i_5_, 2.0) + Math.pow(player.y - level.i_6_, 2.0)) < TARGET_SIZE) {
         this.playing = false;
         this.success = true;
         this.levelIdx = (this.levelIdx + 1) % LEVELS.length;
