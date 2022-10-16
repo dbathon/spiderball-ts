@@ -186,6 +186,8 @@ export class SpiderBall {
   startLevelIfNotPlaying() {
     if (!this.playing) {
       this.setLevel(this.levelIdx);
+      this.pressedKeys.clear();
+      this.pressedMouseButtons.clear();
       this.playing = true;
     }
   }
