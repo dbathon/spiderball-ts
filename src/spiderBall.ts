@@ -11,6 +11,8 @@ const LEVELS = [
   "11150e1e182a2b39404157436b427c3c7e3377316d3d6741613e633c663e71366f3368345f37573c53394d364839503c463c3e3848394d36352e32322e362c342f303232352e2e2b252b1c1f1a17161b7935,3539",
 ];
 
+const WIDTH = 800;
+const HEIGHT = 600;
 const OBSTACLE_SIZE = 30;
 const TARGET_SIZE = 20;
 
@@ -123,13 +125,9 @@ class Level {
 
   readonly obstacles: Obstacle[] = [];
 
-  i_5_: number;
-  i_6_: number;
+  readonly target: Point;
 
-  a_double_fld = 0;
-  b_double_fld = 0;
-  c_double_fld = 0;
-  d_double_fld = 0;
+  readonly origin: Point;
 
   constructor(levelString: string) {
     const [firstPart, obstaclesPart] = levelString.split(",");
@@ -138,11 +136,12 @@ class Level {
 
     player.x = parseInt(firstPart.substring(firstPart.length - 8, firstPart.length - 6), 16) * 16;
     player.y = parseInt(firstPart.substring(firstPart.length - 6, firstPart.length - 4), 16) * 16;
-    this.i_5_ = parseInt(firstPart.substring(firstPart.length - 4, firstPart.length - 2), 16) * 16;
-    this.i_6_ = parseInt(firstPart.substring(firstPart.length - 2, firstPart.length), 16) * 16;
+    this.target = new Point(
+      parseInt(firstPart.substring(firstPart.length - 4, firstPart.length - 2), 16) * 16,
+      parseInt(firstPart.substring(firstPart.length - 2, firstPart.length), 16) * 16
+    );
 
-    this.a_double_fld = player.x - 400.0;
-    this.b_double_fld = player.y - 400.0;
+    this.origin = new Point(player.x - WIDTH / 2, player.y - (HEIGHT / 2 + 100));
 
     const polygonPoints: Point[] = [];
     for (let i = 0; i < firstPart.length / 4 - 2; i++) {
@@ -180,17 +179,22 @@ class Level {
 }
 
 export class SpiderBall {
+  readonly ctx: CanvasRenderingContext2D;
   playing = true;
   success = false;
   readonly pressedKeys = new Set<string>();
   mouseX = 0;
   mouseY = 0;
   readonly pressedMouseButtons = new Set<number>();
-  a_double_fld = 0;
   private levelIdx = 0;
   private level?: Level;
 
-  constructor() {
+  constructor(readonly canvas: HTMLCanvasElement) {
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) {
+      throw new Error("context 2d is not available");
+    }
+    this.ctx = ctx;
     this.setLevel(0);
   }
 
@@ -214,10 +218,8 @@ export class SpiderBall {
   }
 
   // TODO: split the step from drawing...
-  drawAndStep(ctx: CanvasRenderingContext2D) {
-    const canvas = ctx.canvas;
-    const w = canvas.width;
-    const h = canvas.height;
+  drawAndStep() {
+    const ctx = this.ctx;
 
     ctx.save();
 
@@ -225,25 +227,18 @@ export class SpiderBall {
     if (level && this.playing) {
       ctx.save();
 
-      const mouseX = this.mouseX + level.a_double_fld;
-      const mouseY = this.mouseY + level.b_double_fld;
+      const mouseX = this.mouseX + level.origin.x;
+      const mouseY = this.mouseY + level.origin.y;
       const player = level.player;
       const arms = player.arms;
       const levelPoly = level.levelPolygon;
 
       ctx.fillStyle = "#303030";
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-      //ctx.scale(0.5, 0.5);
-      // TODO: draw cursor, remove this
-      // ctx.fillStyle = "#909090";
-      // ctx.fillRect(this.mouseX, this.mouseY, 10, 10);
-
-      level.c_double_fld = player.x - 400.0;
-      level.d_double_fld = player.y - 300.0;
-      level.a_double_fld += (-level.a_double_fld + level.c_double_fld) / 30.0;
-      level.b_double_fld += (-level.b_double_fld + level.d_double_fld) / 30.0;
-      ctx.translate(-level.a_double_fld, -level.b_double_fld);
+      level.origin.x += (-level.origin.x + player.x - WIDTH / 2) / 30.0;
+      level.origin.y += (-level.origin.y + player.y - HEIGHT / 2) / 30.0;
+      ctx.translate(-level.origin.x, -level.origin.y);
 
       if (this.pressedKeys.delete("KeyZ")) {
         this.pressedMouseButtons.add(0);
@@ -287,10 +282,10 @@ export class SpiderBall {
       ctx.lineWidth = 1;
       ctx.strokeStyle = "#ffcc00";
       ctx.beginPath();
-      ctx.arc(level.i_5_, level.i_6_, TARGET_SIZE + 5, 0, 2 * Math.PI);
+      ctx.arc(level.target.x, level.target.y, TARGET_SIZE + 5, 0, 2 * Math.PI);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(level.i_5_, level.i_6_, TARGET_SIZE, 0, 2 * Math.PI);
+      ctx.arc(level.target.x, level.target.y, TARGET_SIZE, 0, 2 * Math.PI);
       ctx.stroke();
 
       for (const arm of arms) {
@@ -397,13 +392,13 @@ export class SpiderBall {
         ctx.fill();
       }
 
-      if (Math.sqrt(Math.pow(player.x - level.i_5_, 2.0) + Math.pow(player.y - level.i_6_, 2.0)) < TARGET_SIZE) {
+      if (player.distanceTo(level.target) < TARGET_SIZE) {
         this.playing = false;
         this.success = true;
         this.levelIdx = (this.levelIdx + 1) % LEVELS.length;
       }
 
-      ctx.translate(level.a_double_fld, level.b_double_fld);
+      ctx.translate(level.origin.x, level.origin.y);
       ctx.fillStyle = "#ffffff";
       ctx.font = "16px sans-serif";
       // TODO: time

@@ -2,11 +2,10 @@ import { SpiderBall } from "./spiderBall";
 import "./style.css";
 
 const canvas = document.querySelector<HTMLCanvasElement>("canvas#canvas");
-const ctx = canvas?.getContext("2d");
 const body = document.querySelector<HTMLBodyElement>("body");
 
-if (canvas && ctx && body) {
-  const game = new SpiderBall();
+if (canvas && body) {
+  const game = new SpiderBall(canvas);
   body.addEventListener("keydown", (event) => {
     if (!event.repeat) {
       game.pressedKeys.add(event.code);
@@ -30,10 +29,8 @@ if (canvas && ctx && body) {
     event.preventDefault();
   });
 
-  const ctxSet = ctx;
-
   function step() {
-    game.drawAndStep(ctxSet);
+    game.drawAndStep();
 
     window.requestAnimationFrame(step);
   }
