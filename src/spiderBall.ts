@@ -35,9 +35,21 @@ class Obstacle extends Point {
     return this.distanceTo(point) <= OBSTACLE_SIZE;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  private drawCircle(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.arc(this.x, this.y, OBSTACLE_SIZE, 0, 2 * Math.PI);
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = "#101010";
+    ctx.translate(4, 4);
+    this.drawCircle(ctx);
+    ctx.stroke();
+    ctx.translate(-4, -4);
+    ctx.fillStyle = "#404040";
+    this.drawCircle(ctx);
+    ctx.fill();
   }
 }
 
@@ -106,7 +118,29 @@ class Arm extends Point {
     this.velocity.y = velocityY;
     this.attached = false;
   }
+
+  draw(ctx: CanvasRenderingContext2D, player: Player) {
+    ctx.lineWidth = 1;
+
+    ctx.strokeStyle = "white";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 5, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.strokeStyle = this.style;
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(player.x, player.y);
+    ctx.stroke();
+  }
 }
+
+const PLAYER_ELLIPSES: [string, number, number, number, number][] = [
+  ["black", 0, 0, 10, 10],
+  ["#0077ff", 0, 0, 9, 9],
+  ["#00ccff", -1, -1.5, 7, 6.5],
+  ["#aaf9ff", -2, -2.5, 5, 4.5],
+];
 
 class Player extends Point {
   readonly velocity = new Point(0, 0);
@@ -115,6 +149,20 @@ class Player extends Point {
 
   constructor() {
     super(0, 0);
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    for (const arm of this.arms) {
+      arm.draw(ctx, this);
+    }
+
+    // draw player
+    for (const [style, offsetX, offsetY, radiusX, radiusY] of PLAYER_ELLIPSES) {
+      ctx.fillStyle = style;
+      ctx.beginPath();
+      ctx.ellipse(this.x + offsetX, this.y + offsetY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+      ctx.fill();
+    }
   }
 }
 
@@ -165,6 +213,42 @@ class Level {
     const arms = player.arms;
     arms[0].shoot(player, -5, -5);
     arms[1].shoot(player, 5, -5);
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+
+    ctx.translate(-this.origin.x, -this.origin.y);
+
+    // draw level polygon
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = "#101010";
+    ctx.translate(-5, -5);
+    this.levelPolygon.drawPath(ctx);
+    ctx.stroke();
+
+    ctx.translate(5, 5);
+    ctx.fillStyle = "#758085";
+    this.levelPolygon.drawPath(ctx);
+    ctx.fill();
+
+    // draw target
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#ffcc00";
+    ctx.beginPath();
+    ctx.arc(this.target.x, this.target.y, TARGET_SIZE + 5, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(this.target.x, this.target.y, TARGET_SIZE, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    for (const obstacle of this.obstacles) {
+      obstacle.draw(ctx);
+    }
+
+    this.player.draw(ctx);
+
+    ctx.restore();
   }
 }
 
@@ -356,75 +440,7 @@ export class SpiderBall {
 
     const level = this.level;
     if (level) {
-      ctx.save();
-      ctx.translate(-level.origin.x, -level.origin.y);
-
-      const player = level.player;
-
-      // draw level
-      ctx.lineWidth = 14;
-      ctx.strokeStyle = "#101010";
-      ctx.translate(-5, -5);
-      level.levelPolygon.drawPath(ctx);
-      ctx.stroke();
-
-      ctx.translate(5, 5);
-      ctx.fillStyle = "#758085";
-      level.levelPolygon.drawPath(ctx);
-      ctx.fill();
-
-      // draw target
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "#ffcc00";
-      ctx.beginPath();
-      ctx.arc(level.target.x, level.target.y, TARGET_SIZE + 5, 0, 2 * Math.PI);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(level.target.x, level.target.y, TARGET_SIZE, 0, 2 * Math.PI);
-      ctx.stroke();
-
-      for (const obstacle of level.obstacles) {
-        ctx.lineWidth = 14;
-        ctx.strokeStyle = "#101010";
-        ctx.translate(4, 4);
-        obstacle.draw(ctx);
-        ctx.stroke();
-        ctx.translate(-4, -4);
-        ctx.fillStyle = "#404040";
-        obstacle.draw(ctx);
-        ctx.fill();
-      }
-
-      for (const arm of player.arms) {
-        ctx.lineWidth = 1;
-
-        ctx.strokeStyle = "white";
-        ctx.beginPath();
-        ctx.arc(arm.x, arm.y, 5, 0, 2 * Math.PI);
-        ctx.stroke();
-
-        ctx.strokeStyle = arm.style;
-        ctx.beginPath();
-        ctx.moveTo(arm.x, arm.y);
-        ctx.lineTo(player.x, player.y);
-        ctx.stroke();
-      }
-
-      // draw player
-      const playerCircles: [string, number, number, number, number][] = [
-        ["black", 0, 0, 10, 10],
-        ["#0077ff", 0, 0, 9, 9],
-        ["#00ccff", -1, -1.5, 7, 6.5],
-        ["#aaf9ff", -2, -2.5, 5, 4.5],
-      ];
-      for (const [style, offsetX, offsetY, radiusX, radiusY] of playerCircles) {
-        ctx.fillStyle = style;
-        ctx.beginPath();
-        ctx.ellipse(player.x + offsetX, player.y + offsetY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-
-      ctx.restore();
+      level.draw(ctx);
     }
 
     ctx.fillStyle = "#ffffff";
