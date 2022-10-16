@@ -386,16 +386,16 @@ export class SpiderBall {
       ds_4_[0] += ds_4_[2];
       ds_4_[1] += ds_4_[3];
 
-      const playerCircles: [string, number][] = [
-        ["black", 10],
-        ["#0077ff", 9],
-        ["#00ccff", 8], // TODO: not exactly like the original
-        ["#aaf9ff", 7], // TODO: not exactly like the original
+      const playerCircles: [string, number, number, number, number][] = [
+        ["black", 0, 0, 10, 10],
+        ["#0077ff", 0, 0, 9, 9],
+        ["#00ccff", -1, -1.5, 7, 6.5],
+        ["#aaf9ff", -2, -2.5, 5, 4.5],
       ];
-      for (const [style, radius] of playerCircles) {
+      for (const [style, offsetX, offsetY, radiusX, radiusY] of playerCircles) {
         ctx.fillStyle = style;
         ctx.beginPath();
-        ctx.arc(ds_4_[0], ds_4_[1], radius, 0, 2 * Math.PI);
+        ctx.ellipse(ds_4_[0] + offsetX, ds_4_[1] + offsetY, radiusX, radiusY, 0, 0, 2 * Math.PI);
         ctx.fill();
       }
 
