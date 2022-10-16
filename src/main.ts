@@ -30,7 +30,7 @@ if (canvas && body) {
   });
 
   function step() {
-    game.drawAndStep();
+    game.stepAndRender();
 
     window.requestAnimationFrame(step);
   }

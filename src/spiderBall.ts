@@ -207,28 +207,17 @@ export class SpiderBall {
     }
   }
 
-  // TODO: split the step from drawing...
-  drawAndStep() {
-    const ctx = this.ctx;
-
-    ctx.save();
-
+  step() {
     const level = this.level;
     if (level && this.playing) {
-      ctx.save();
-
       const mouseX = this.mouseX + level.origin.x;
       const mouseY = this.mouseY + level.origin.y;
       const player = level.player;
       const arms = player.arms;
       const levelPoly = level.levelPolygon;
 
-      ctx.fillStyle = "#303030";
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
       level.origin.x += (-level.origin.x + player.x - WIDTH / 2) / 30.0;
       level.origin.y += (-level.origin.y + player.y - HEIGHT / 2) / 30.0;
-      ctx.translate(-level.origin.x, -level.origin.y);
 
       if (this.pressedKeys.delete("KeyZ")) {
         this.pressedMouseButtons.add(0);
@@ -257,27 +246,6 @@ export class SpiderBall {
         }
       }
 
-      ctx.lineWidth = 14;
-      ctx.strokeStyle = "#101010";
-      ctx.translate(-5, -5);
-      levelPoly.drawPath(ctx);
-      ctx.stroke();
-
-      ctx.translate(5, 5);
-      ctx.fillStyle = "#758085";
-      levelPoly.drawPath(ctx);
-      ctx.fill();
-
-      // draw the target
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "#ffcc00";
-      ctx.beginPath();
-      ctx.arc(level.target.x, level.target.y, TARGET_SIZE + 5, 0, 2 * Math.PI);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(level.target.x, level.target.y, TARGET_SIZE, 0, 2 * Math.PI);
-      ctx.stroke();
-
       for (const arm of arms) {
         if (!levelPoly.contains(arm) && !levelPoly.contains(new Point(arm.x + 5, arm.y + 5))) {
           arm.attached = true;
@@ -288,8 +256,7 @@ export class SpiderBall {
         this.playing = false;
       }
 
-      const obstacles = level.obstacles;
-      for (const obstacle of obstacles) {
+      for (const obstacle of level.obstacles) {
         if (
           !levelPoly.contains(
             new Point(obstacle.x + OBSTACLE_SIZE + 60.0 * Math.sign(obstacle.velocityX), obstacle.y + OBSTACLE_SIZE)
@@ -317,16 +284,6 @@ export class SpiderBall {
           }
         }
         obstacle.x += obstacle.velocityX;
-
-        ctx.lineWidth = 14;
-        ctx.strokeStyle = "#101010";
-        ctx.translate(4, 4);
-        obstacle.draw(ctx);
-        ctx.stroke();
-        ctx.translate(-4, -4);
-        ctx.fillStyle = "#404040";
-        obstacle.draw(ctx);
-        ctx.fill();
       }
 
       for (const arm of arms) {
@@ -348,19 +305,6 @@ export class SpiderBall {
         }
         player.velocity.x += (distance / d_27_) * Math.cos(d);
         player.velocity.y += (distance / d_27_) * Math.sin(d);
-
-        ctx.lineWidth = 1;
-
-        ctx.strokeStyle = "white";
-        ctx.beginPath();
-        ctx.arc(arm.x, arm.y, 5, 0, 2 * Math.PI);
-        ctx.stroke();
-
-        ctx.strokeStyle = arm.style;
-        ctx.beginPath();
-        ctx.moveTo(arm.x, arm.y);
-        ctx.lineTo(player.x, player.y);
-        ctx.stroke();
       }
 
       player.velocity.y += 0.09;
@@ -369,31 +313,11 @@ export class SpiderBall {
       player.x += player.velocity.x;
       player.y += player.velocity.y;
 
-      const playerCircles: [string, number, number, number, number][] = [
-        ["black", 0, 0, 10, 10],
-        ["#0077ff", 0, 0, 9, 9],
-        ["#00ccff", -1, -1.5, 7, 6.5],
-        ["#aaf9ff", -2, -2.5, 5, 4.5],
-      ];
-      for (const [style, offsetX, offsetY, radiusX, radiusY] of playerCircles) {
-        ctx.fillStyle = style;
-        ctx.beginPath();
-        ctx.ellipse(player.x + offsetX, player.y + offsetY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-
       if (player.distanceTo(level.target) < TARGET_SIZE) {
         this.playing = false;
         this.success = true;
         this.levelIdx = (this.levelIdx + 1) % LEVELS.length;
       }
-
-      ctx.translate(level.origin.x, level.origin.y);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "16px sans-serif";
-      // TODO: time
-      const time = 0;
-      ctx.fillText(this.levelIdx + 1 + ": " + time + "s", 15, 30);
 
       if (this.pressedKeys.delete("KeyR")) {
         this.playing = false;
@@ -419,20 +343,112 @@ export class SpiderBall {
         this.playing = false;
         this.success = true;
       }
-      ctx.restore();
+    }
+  }
 
-      if (!this.playing) {
-        // not playing
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "16px sans-serif";
-        if (this.success) {
-          ctx.fillText("Level passed - click to begin", 320, 300);
-        } else {
-          ctx.fillText("Game over - click to begin", 330, 300);
-        }
+  render() {
+    const ctx = this.ctx;
+    ctx.save();
+
+    // draw background
+    ctx.fillStyle = "#303030";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    const level = this.level;
+    if (level) {
+      ctx.save();
+      ctx.translate(-level.origin.x, -level.origin.y);
+
+      const player = level.player;
+
+      // draw level
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = "#101010";
+      ctx.translate(-5, -5);
+      level.levelPolygon.drawPath(ctx);
+      ctx.stroke();
+
+      ctx.translate(5, 5);
+      ctx.fillStyle = "#758085";
+      level.levelPolygon.drawPath(ctx);
+      ctx.fill();
+
+      // draw target
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#ffcc00";
+      ctx.beginPath();
+      ctx.arc(level.target.x, level.target.y, TARGET_SIZE + 5, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(level.target.x, level.target.y, TARGET_SIZE, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      for (const obstacle of level.obstacles) {
+        ctx.lineWidth = 14;
+        ctx.strokeStyle = "#101010";
+        ctx.translate(4, 4);
+        obstacle.draw(ctx);
+        ctx.stroke();
+        ctx.translate(-4, -4);
+        ctx.fillStyle = "#404040";
+        obstacle.draw(ctx);
+        ctx.fill();
+      }
+
+      for (const arm of player.arms) {
+        ctx.lineWidth = 1;
+
+        ctx.strokeStyle = "white";
+        ctx.beginPath();
+        ctx.arc(arm.x, arm.y, 5, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        ctx.strokeStyle = arm.style;
+        ctx.beginPath();
+        ctx.moveTo(arm.x, arm.y);
+        ctx.lineTo(player.x, player.y);
+        ctx.stroke();
+      }
+
+      // draw player
+      const playerCircles: [string, number, number, number, number][] = [
+        ["black", 0, 0, 10, 10],
+        ["#0077ff", 0, 0, 9, 9],
+        ["#00ccff", -1, -1.5, 7, 6.5],
+        ["#aaf9ff", -2, -2.5, 5, 4.5],
+      ];
+      for (const [style, offsetX, offsetY, radiusX, radiusY] of playerCircles) {
+        ctx.fillStyle = style;
+        ctx.beginPath();
+        ctx.ellipse(player.x + offsetX, player.y + offsetY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "16px sans-serif";
+    // TODO: time
+    const time = 0;
+    ctx.fillText(this.levelIdx + 1 + ": " + time + "s", 15, 30);
+
+    if (!this.playing) {
+      // not playing
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "16px sans-serif";
+      if (this.success) {
+        ctx.fillText("Level passed - click to begin", 320, 300);
+      } else {
+        ctx.fillText("Game over - click to begin", 330, 300);
       }
     }
 
     ctx.restore();
+  }
+
+  stepAndRender() {
+    this.step();
+    this.render();
   }
 }
