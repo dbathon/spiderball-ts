@@ -118,6 +118,20 @@ class Player extends Point {
   }
 }
 
+function parsePoints(input: string): Point[] {
+  const result: Point[] = [];
+  if (input.length % 4 !== 0) {
+    throw new Error("invalid input: " + input);
+  }
+  for (let i = 0; i < input.length; i += 4) {
+    result.push(
+      new Point(parseInt(input.substring(i, i + 2), 16) * 16, parseInt(input.substring(i + 2, i + 4), 16) * 16)
+    );
+  }
+
+  return result;
+}
+
 class Level {
   readonly player = new Player();
 
@@ -130,40 +144,22 @@ class Level {
   readonly origin: Point;
 
   constructor(levelString: string) {
-    const [firstPart, obstaclesPart] = levelString.split(",");
+    const [mainPart, obstaclesPart] = levelString.split(",");
+    const mainPoints = parsePoints(mainPart);
+
+    this.target = mainPoints.pop()!;
 
     const player = this.player;
-
-    player.x = parseInt(firstPart.substring(firstPart.length - 8, firstPart.length - 6), 16) * 16;
-    player.y = parseInt(firstPart.substring(firstPart.length - 6, firstPart.length - 4), 16) * 16;
-    this.target = new Point(
-      parseInt(firstPart.substring(firstPart.length - 4, firstPart.length - 2), 16) * 16,
-      parseInt(firstPart.substring(firstPart.length - 2, firstPart.length), 16) * 16
-    );
+    const playerPos = mainPoints.pop()!;
+    player.x = playerPos.x;
+    player.y = playerPos.y;
 
     this.origin = new Point(player.x - WIDTH / 2, player.y - (HEIGHT / 2 + 100));
 
-    const polygonPoints: Point[] = [];
-    for (let i = 0; i < firstPart.length / 4 - 2; i++) {
-      polygonPoints.push(
-        new Point(
-          parseInt(firstPart.substring(i << 2, (i << 2) + 2), 16) * 16,
-          parseInt(firstPart.substring((i << 2) + 2, (i << 2) + 4), 16) * 16
-        )
-      );
-    }
-    this.levelPolygon = new Polygon(polygonPoints);
+    this.levelPolygon = new Polygon(mainPoints);
 
-    if (obstaclesPart) {
-      for (let i = 0; i < obstaclesPart.length / 4; i++) {
-        this.obstacles.push(
-          new Obstacle(
-            parseInt(obstaclesPart.substring(i * 4, i * 4 + 2), 16) * 16,
-            parseInt(obstaclesPart.substring(i * 4 + 2, i * 4 + 4), 16) * 16,
-            1
-          )
-        );
-      }
+    for (const obstaclePoint of parsePoints(obstaclesPart ?? "")) {
+      this.obstacles.push(new Obstacle(obstaclePoint.x, obstaclePoint.y, 1));
     }
 
     const arms = player.arms;
