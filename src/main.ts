@@ -29,6 +29,15 @@ if (canvas && body) {
     event.preventDefault();
   });
 
+  const levelInput = document.querySelector<HTMLInputElement>("input#levelInput");
+  const loadButton = document.querySelector<HTMLButtonElement>("button#load");
+  loadButton?.addEventListener("click", () => {
+    const levelString = levelInput?.value;
+    if (levelString) {
+      game.setNextLevelString(levelString.trim());
+    }
+  });
+
   function step() {
     game.stepAndRender();
 

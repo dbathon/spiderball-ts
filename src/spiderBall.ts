@@ -191,7 +191,7 @@ class Level {
 
   readonly origin: Point;
 
-  constructor(readonly levelNumber: number, levelString: string) {
+  constructor(readonly levelString: string) {
     const [mainPart, obstaclesPart] = levelString.split(",");
     const mainPoints = parsePoints(mainPart);
 
@@ -260,7 +260,7 @@ export class SpiderBall {
   mouseX = 0;
   mouseY = 0;
   readonly pressedMouseButtons = new Set<number>();
-  private levelIdx = 0;
+  private nextLevelString = LEVELS[0];
   private level?: Level;
 
   private levelStartMillis = 0;
@@ -272,31 +272,43 @@ export class SpiderBall {
       throw new Error("context 2d is not available");
     }
     this.ctx = ctx;
-    this.startLevel(0);
+    this.startLevel();
+  }
+
+  get levelIdx() {
+    return LEVELS.indexOf(this.level?.levelString ?? "");
   }
 
   get levelMillis() {
     return (this.steps * 1000) / 60;
   }
 
-  startLevel(idx: number) {
-    const levelString = LEVELS[idx];
-    if (levelString) {
-      this.level = new Level(idx + 1, levelString);
-      this.levelIdx = idx;
-      this.playing = true;
-      this.success = false;
-      this.levelStartMillis = performance.now();
-      this.steps = 0;
+  startLevel() {
+    try {
+      this.level = new Level(this.nextLevelString);
+    } catch {
+      // invalid level, just go to the first one
+      this.nextLevelString = LEVELS[0];
+      this.level = new Level(this.nextLevelString);
     }
+    this.playing = true;
+    this.success = false;
+    this.levelStartMillis = performance.now();
+    this.steps = 0;
   }
 
   startLevelIfNotPlaying() {
     if (!this.playing) {
       this.pressedKeys.clear();
       this.pressedMouseButtons.clear();
-      this.startLevel(this.levelIdx);
+      this.startLevel();
     }
+  }
+
+  setNextLevelString(levelString: string) {
+    this.nextLevelString = levelString;
+    this.playing = false;
+    this.success = true;
   }
 
   step() {
@@ -406,34 +418,18 @@ export class SpiderBall {
       player.y += player.velocity.y;
 
       if (player.distanceTo(level.target) < TARGET_SIZE) {
-        this.playing = false;
-        this.success = true;
-        this.levelIdx = (this.levelIdx + 1) % LEVELS.length;
+        this.setNextLevelString(LEVELS[(this.levelIdx + 1) % LEVELS.length]);
       }
 
       if (this.pressedKeys.delete("KeyR")) {
         this.playing = false;
       }
-      if (this.pressedKeys.delete("KeyL")) {
-        /*
-          TODO: load map
-          String string;
-          if ((string = JOptionPane.showInputDialog("Load map", "")) != null) {
-              level_idx = levels.length - 1;
-              levels[levels.length - 1] = string;
-              playing = false;
-          }
-          */
-      }
+
       if (this.pressedKeys.delete("KeyW")) {
-        this.levelIdx = Math.min(this.levelIdx + 1, LEVELS.length - 1);
-        this.playing = false;
-        this.success = true;
+        this.setNextLevelString(LEVELS[Math.min(this.levelIdx + 1, LEVELS.length - 1)]);
       }
       if (this.pressedKeys.delete("KeyQ")) {
-        this.levelIdx = Math.max(this.levelIdx - 1, 0);
-        this.playing = false;
-        this.success = true;
+        this.setNextLevelString(LEVELS[Math.max(this.levelIdx - 1, 0)]);
       }
 
       ++this.steps;
@@ -455,7 +451,7 @@ export class SpiderBall {
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "16px sans-serif";
-    ctx.fillText(level?.levelNumber + ": " + (this.levelMillis / 1000).toFixed(1) + "s", 15, 30);
+    ctx.fillText(this.levelIdx + 1 + ": " + (this.levelMillis / 1000).toFixed(1) + "s", 15, 30);
 
     if (!this.playing) {
       // not playing
