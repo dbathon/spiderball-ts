@@ -191,7 +191,7 @@ class Level {
 
   readonly origin: Point;
 
-  constructor(levelString: string) {
+  constructor(readonly levelNumber: number, levelString: string) {
     const [mainPart, obstaclesPart] = levelString.split(",");
     const mainPoints = parsePoints(mainPart);
 
@@ -263,31 +263,39 @@ export class SpiderBall {
   private levelIdx = 0;
   private level?: Level;
 
+  private levelStartMillis = 0;
+  private steps = 0;
+
   constructor(readonly canvas: HTMLCanvasElement) {
     const ctx = canvas?.getContext("2d");
     if (!ctx) {
       throw new Error("context 2d is not available");
     }
     this.ctx = ctx;
-    this.setLevel(0);
+    this.startLevel(0);
   }
 
-  setLevel(idx: number) {
+  get levelMillis() {
+    return (this.steps * 1000) / 60;
+  }
+
+  startLevel(idx: number) {
     const levelString = LEVELS[idx];
     if (levelString) {
-      this.level = new Level(levelString);
-      console.log("level:", this.level);
+      this.level = new Level(idx + 1, levelString);
       this.levelIdx = idx;
+      this.playing = true;
       this.success = false;
+      this.levelStartMillis = performance.now();
+      this.steps = 0;
     }
   }
 
   startLevelIfNotPlaying() {
     if (!this.playing) {
-      this.setLevel(this.levelIdx);
       this.pressedKeys.clear();
       this.pressedMouseButtons.clear();
-      this.playing = true;
+      this.startLevel(this.levelIdx);
     }
   }
 
@@ -427,6 +435,8 @@ export class SpiderBall {
         this.playing = false;
         this.success = true;
       }
+
+      ++this.steps;
     }
   }
 
@@ -445,9 +455,7 @@ export class SpiderBall {
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "16px sans-serif";
-    // TODO: time
-    const time = 0;
-    ctx.fillText(this.levelIdx + 1 + ": " + time + "s", 15, 30);
+    ctx.fillText(level?.levelNumber + ": " + (this.levelMillis / 1000).toFixed(1) + "s", 15, 30);
 
     if (!this.playing) {
       // not playing
@@ -464,7 +472,10 @@ export class SpiderBall {
   }
 
   stepAndRender() {
-    this.step();
+    // step until we are caught up to the 60fps goal
+    while (this.playing && this.levelMillis < performance.now() - this.levelStartMillis) {
+      this.step();
+    }
     this.render();
   }
 }
