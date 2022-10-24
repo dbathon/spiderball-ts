@@ -101,7 +101,7 @@ class Polygon {
   }
 }
 
-class Arm extends Point {
+class Rope extends Point {
   readonly velocity = new Point(0, 0);
 
   /** not attached (false), attached to the level (true) or attached to an obstacle */
@@ -145,15 +145,15 @@ const PLAYER_ELLIPSES: [string, number, number, number, number][] = [
 class Player extends Point {
   readonly velocity = new Point(0, 0);
 
-  readonly arms: [Arm, Arm] = [new Arm("orange"), new Arm("red")];
+  readonly ropes: [Rope, Rope] = [new Rope("orange"), new Rope("red")];
 
   constructor() {
     super(0, 0);
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    for (const arm of this.arms) {
-      arm.draw(ctx, this);
+    for (const rope of this.ropes) {
+      rope.draw(ctx, this);
     }
 
     // draw player
@@ -210,9 +210,9 @@ class Level {
       this.obstacles.push(new Obstacle(obstaclePoint.x, obstaclePoint.y, 1));
     }
 
-    const arms = player.arms;
-    arms[0].shoot(player, -5, -5);
-    arms[1].shoot(player, 5, -5);
+    const ropes = player.ropes;
+    ropes[0].shoot(player, -5, -5);
+    ropes[1].shoot(player, 5, -5);
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -317,7 +317,7 @@ export class SpiderBall {
       const mouseX = this.mouseX + level.origin.x;
       const mouseY = this.mouseY + level.origin.y;
       const player = level.player;
-      const arms = player.arms;
+      const ropes = player.ropes;
       const levelPoly = level.levelPolygon;
 
       level.origin.x += (-level.origin.x + player.x - WIDTH / 2) / 30.0;
@@ -343,17 +343,17 @@ export class SpiderBall {
         const velocityX = 13.0 * Math.cos(d);
         const velocityY = 13.0 * Math.sin(d);
         if (leftPressed) {
-          arms[0].shoot(player, velocityX, velocityY);
+          ropes[0].shoot(player, velocityX, velocityY);
         }
         if (rightPressed) {
-          arms[1].shoot(player, velocityX, velocityY);
+          ropes[1].shoot(player, velocityX, velocityY);
         }
       }
 
-      for (const arm of arms) {
-        if (!levelPoly.contains(arm) && !levelPoly.contains(new Point(arm.x + 5, arm.y + 5))) {
-          arm.attached = true;
-          arm.velocity.x = 0.0;
+      for (const rope of ropes) {
+        if (!levelPoly.contains(rope) && !levelPoly.contains(new Point(rope.x + 5, rope.y + 5))) {
+          rope.attached = true;
+          rope.velocity.x = 0.0;
         }
       }
       if (!levelPoly.contains(player) && !levelPoly.contains(new Point(player.x + 5, player.y + 5))) {
@@ -368,13 +368,13 @@ export class SpiderBall {
         ) {
           obstacle.velocityX *= -1.0;
         }
-        for (const arm of arms) {
-          if (obstacle.contains(arm)) {
-            if (!arm.attached) {
-              arm.attached = obstacle;
+        for (const rope of ropes) {
+          if (obstacle.contains(rope)) {
+            if (!rope.attached) {
+              rope.attached = obstacle;
             } else {
-              const d_18_ = Math.atan2(arm.y - player.y, arm.x - player.x);
-              obstacle.velocityX += (-player.distanceTo(arm) / 1500.0) * Math.cos(d_18_);
+              const d_18_ = Math.atan2(rope.y - player.y, rope.x - player.x);
+              obstacle.velocityX += (-player.distanceTo(rope) / 1500.0) * Math.cos(d_18_);
             }
           }
         }
@@ -382,29 +382,29 @@ export class SpiderBall {
           this.playing = false;
         }
         obstacle.velocityX *= 0.997;
-        for (const arm of arms) {
-          if (arm.attached === obstacle) {
-            arm.velocity.x = obstacle.velocityX;
+        for (const rope of ropes) {
+          if (rope.attached === obstacle) {
+            rope.velocity.x = obstacle.velocityX;
           }
         }
         obstacle.x += obstacle.velocityX;
       }
 
-      for (const arm of arms) {
-        const d = Math.atan2(arm.y - player.y, arm.x - player.x);
-        const distance = player.distanceTo(arm);
+      for (const rope of ropes) {
+        const d = Math.atan2(rope.y - player.y, rope.x - player.x);
+        const distance = player.distanceTo(rope);
         let d_27_: number;
-        if (!arm.attached) {
-          arm.x += arm.velocity.x;
-          arm.y += arm.velocity.y;
-          arm.velocity.x *= 0.992;
-          arm.velocity.y *= 0.992;
-          arm.velocity.y += 0.09;
-          arm.velocity.x += (-distance / 1500.0) * Math.cos(d);
-          arm.velocity.y += (-distance / 1500.0) * Math.sin(d);
+        if (!rope.attached) {
+          rope.x += rope.velocity.x;
+          rope.y += rope.velocity.y;
+          rope.velocity.x *= 0.992;
+          rope.velocity.y *= 0.992;
+          rope.velocity.y += 0.09;
+          rope.velocity.x += (-distance / 1500.0) * Math.cos(d);
+          rope.velocity.y += (-distance / 1500.0) * Math.sin(d);
           d_27_ = 4000.0;
         } else {
-          arm.x += arm.velocity.x;
+          rope.x += rope.velocity.x;
           d_27_ = 1500.0;
         }
         player.velocity.x += (distance / d_27_) * Math.cos(d);
