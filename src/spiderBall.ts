@@ -16,6 +16,9 @@ const HEIGHT = 600;
 const OBSTACLE_SIZE = 30;
 const TARGET_SIZE = 20;
 
+const FPS = 60;
+const FRAME_MILLIS = 1000 / FPS;
+
 class Point {
   constructor(public x: number, public y: number) {}
 
@@ -263,7 +266,7 @@ export class SpiderBall {
   private nextLevelString = LEVELS[0];
   private level?: Level;
 
-  private levelStartMillis = 0;
+  private levelStartMillis?: number;
   private steps = 0;
 
   constructor(readonly canvas: HTMLCanvasElement) {
@@ -280,7 +283,7 @@ export class SpiderBall {
   }
 
   get levelMillis() {
-    return (this.steps * 1000) / 60;
+    return this.steps * FRAME_MILLIS;
   }
 
   startLevel() {
@@ -293,7 +296,7 @@ export class SpiderBall {
     }
     this.playing = true;
     this.success = false;
-    this.levelStartMillis = performance.now();
+    this.levelStartMillis = undefined;
     this.steps = 0;
   }
 
@@ -467,10 +470,18 @@ export class SpiderBall {
     ctx.restore();
   }
 
-  stepAndRender() {
+  stepAndRender(millis: DOMHighResTimeStamp) {
     // step until we are caught up to the 60fps goal
-    while (this.playing && this.levelMillis < performance.now() - this.levelStartMillis) {
-      this.step();
+    if (this.playing) {
+      if (this.levelStartMillis === undefined) {
+        this.levelStartMillis = millis;
+      }
+      // allow some tolerance for the first step, since we generally want to always do it
+      let tolerance = FRAME_MILLIS;
+      while (this.playing && this.levelMillis - tolerance <= millis - this.levelStartMillis) {
+        this.step();
+        tolerance = 0;
+      }
     }
     this.render();
   }

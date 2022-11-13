@@ -38,8 +38,10 @@ if (canvas && body) {
     }
   });
 
-  function step() {
-    game.stepAndRender();
+  function step(millis: DOMHighResTimeStamp) {
+    if (document.visibilityState === "visible") {
+      game.stepAndRender(millis);
+    }
 
     window.requestAnimationFrame(step);
   }
